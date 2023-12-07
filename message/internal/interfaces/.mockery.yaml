@@ -1,0 +1,9 @@
+dir: "mocks"
+outpkg: "mocks"
+mockname: "{{.InterfaceNameCamel}}"
+filename: "{{.InterfaceNameSnake}}_mock.go"
+packages:
+  message/internal/interfaces:
+    interfaces:
+      MessageService:
+      MessageRepository:
