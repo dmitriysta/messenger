@@ -1,4 +1,4 @@
-module message
+module github.com/dmitriysta/messenger/message
 
 go 1.21.4
 

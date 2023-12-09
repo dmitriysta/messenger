@@ -1,10 +1,12 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"message/internal/pkg/metrics"
 	"strconv"
 	"time"
+
+	"github.com/dmitriysta/messenger/message/internal/pkg/metrics"
+
+	"github.com/gin-gonic/gin"
 )
 
 func PrometheusMiddleware() gin.HandlerFunc {

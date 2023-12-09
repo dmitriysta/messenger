@@ -2,13 +2,15 @@ package service
 
 import (
 	"context"
+	"testing"
+	"time"
+
+	"github.com/dmitriysta/messenger/message/internal/interfaces/mocks"
+	"github.com/dmitriysta/messenger/message/internal/models"
+
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"message/internal/interfaces/mocks"
-	"message/internal/models"
-	"testing"
-	"time"
 )
 
 func TestMessageService_CreateMessage(t *testing.T) {
