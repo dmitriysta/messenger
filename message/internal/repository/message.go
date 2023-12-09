@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+
+	"github.com/dmitriysta/messenger/message/internal/models"
+
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"message/internal/models"
 )
 
 type MessageRepository struct {

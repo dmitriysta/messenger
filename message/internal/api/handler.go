@@ -1,13 +1,15 @@
 package api
 
 import (
+	"net/http"
+	"strconv"
+
+	"github.com/dmitriysta/messenger/message/internal/interfaces"
+
 	"github.com/gin-gonic/gin"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/uber/jaeger-client-go"
-	"message/internal/interfaces"
-	"net/http"
-	"strconv"
 )
 
 type MessageRequest struct {

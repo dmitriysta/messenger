@@ -4,7 +4,8 @@ package interfaces
 
 import (
 	"context"
-	"message/internal/models"
+
+	"github.com/dmitriysta/messenger/message/internal/models"
 )
 
 type MessageRepository interface {

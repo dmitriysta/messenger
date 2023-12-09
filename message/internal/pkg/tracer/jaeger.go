@@ -1,11 +1,12 @@
 package tracer
 
 import (
+	"io"
+
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/uber/jaeger-client-go"
 	"github.com/uber/jaeger-client-go/config"
-	"io"
 )
 
 func NewJaegerTracer(serviceName string, logger *logrus.Logger) (opentracing.Tracer, io.Closer, error) {

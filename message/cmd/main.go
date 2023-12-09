@@ -1,10 +1,10 @@
 package main
 
 import (
-	"message/internal/api"
-	"message/internal/pkg/tracer"
-	"message/internal/repository"
-	"message/internal/service"
+	"github.com/dmitriysta/messenger/message/internal/api"
+	"github.com/dmitriysta/messenger/message/internal/pkg/tracer"
+	"github.com/dmitriysta/messenger/message/internal/repository"
+	"github.com/dmitriysta/messenger/message/internal/service"
 
 	"github.com/sirupsen/logrus"
 )
