@@ -1,0 +1,9 @@
+dir: "mocks"
+outpkg: "mocks"
+mockname: "{{.InterfaceNameCamel}}"
+filename: "{{.InterfaceNameSnake}}_mock.go"
+packages:
+  github.com/dmitriysta/messenger/user/internal/interfaces:
+    interfaces:
+      UserService:
+      UserRepository:
