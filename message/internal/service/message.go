@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+
+	"github.com/dmitriysta/messenger/message/internal/interfaces"
+	"github.com/dmitriysta/messenger/message/internal/models"
+
 	"github.com/sirupsen/logrus"
-	"message/internal/interfaces"
-	"message/internal/models"
 )
 
 type MessageService struct {

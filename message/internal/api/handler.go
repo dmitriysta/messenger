@@ -1,13 +1,16 @@
 package api
 
 import (
+	"net/http"
+	"strconv"
+
+	"github.com/dmitriysta/messenger/message/internal/interfaces"
+	"github.com/dmitriysta/messenger/message/internal/pkg/errors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/uber/jaeger-client-go"
-	"message/internal/interfaces"
-	"net/http"
-	"strconv"
 )
 
 type MessageRequest struct {
@@ -43,9 +46,9 @@ func (h *MessageHandler) CreateMessageHandler(c *gin.Context) {
 			"handler": "CreateMessageHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Error binding request body")
+		}).Error(errors.InvalidRequestBody)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.InvalidRequestBody})
 		return
 	}
 
@@ -60,13 +63,18 @@ func (h *MessageHandler) CreateMessageHandler(c *gin.Context) {
 			"content":   messageRequest.Content,
 			"traceId":   traceID,
 			"error":     err.Error(),
-		}).Error("Error creating message")
+		}).Error(errors.ErrorCreatingMessage)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error creating message"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorCreatingMessage})
 		return
 	}
 
-	c.JSON(http.StatusCreated, message)
+	c.JSON(http.StatusCreated, gin.H{
+		"id":        message.Id,
+		"userId":    message.UserID,
+		"channelId": message.ChannelID,
+		"content":   message.Content,
+	})
 }
 
 func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
@@ -80,9 +88,9 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
 			"module":  "message",
 			"handler": "GetMessagesByChannelIdHandler",
 			"traceId": traceID,
-		}).Error("channelId is required")
+		}).Error(errors.InvalidChannelId)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "channelId is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.InvalidChannelId})
 		return
 	}
 
@@ -94,9 +102,9 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
 			"handler": "GetMessagesByChannelIdHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("channelId must be an integer")
+		}).Error(errors.ErrorChannelIdNotInt)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "channelId must be an integer"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorChannelIdNotInt})
 		return
 	}
 
@@ -109,9 +117,9 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
 			"channelId": channelId,
 			"traceId":   traceID,
 			"error":     err.Error(),
-		}).Error("Error getting messages")
+		}).Error(errors.ErrorGettingMessages)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting messages"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorGettingMessages})
 		return
 	}
 
@@ -131,13 +139,14 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 			"handler": "UpdateMessageHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Message id is not integer")
+		}).Error(errors.ErrorMessageIdNotInt)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Message id must be an integer"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorMessageIdNotInt})
 		return
 	}
 
 	var updateReq MessageRequest
+
 	if err := c.ShouldBindJSON(&updateReq); err != nil {
 		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
 		h.logger.WithFields(logrus.Fields{
@@ -145,9 +154,9 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 			"handler": "UpdateMessageHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Error binding request body")
+		}).Error(errors.ErrorBindingRequestBody)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorBindingRequestBody})
 		return
 	}
 
@@ -159,9 +168,9 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 			"handler": "UpdateMessageHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Error getting message")
+		}).Error(errors.ErrorGettingMessages)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Message not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorGettingMessages})
 		return
 	}
 
@@ -171,15 +180,21 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 		h.logger.WithFields(logrus.Fields{
 			"module":  "message",
 			"handler": "UpdateMessageHandler",
+			"content": message.Content + " -> " + updateReq.Content,
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Error updating message")
+		}).Error(errors.ErrorUpdatingMessage)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating message"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorUpdatingMessage})
 		return
 	}
 
-	c.JSON(http.StatusOK, message)
+	c.JSON(http.StatusOK, gin.H{
+		"id":        message.Id,
+		"userId":    message.UserID,
+		"channelId": message.ChannelID,
+		"content":   message.Content,
+	})
 }
 
 func (h *MessageHandler) DeleteMessageHandler(c *gin.Context) {
@@ -195,9 +210,9 @@ func (h *MessageHandler) DeleteMessageHandler(c *gin.Context) {
 			"handler": "DeleteMessageHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Error: message id isn't an integer")
+		}).Error(errors.ErrorMessageIdNotInt)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Message id must be an integer"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorMessageIdNotInt})
 		return
 	}
 
@@ -208,11 +223,13 @@ func (h *MessageHandler) DeleteMessageHandler(c *gin.Context) {
 			"handler": "DeleteMessageHandler",
 			"traceId": traceID,
 			"error":   err.Error(),
-		}).Error("Error deleting message")
+		}).Error(errors.ErrorDeletingMessage)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting message"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorDeletingMessage})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Message deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Message deleted successfully",
+	})
 }
