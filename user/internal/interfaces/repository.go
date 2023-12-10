@@ -1,3 +1,5 @@
+//go:generate mockery
+
 package interfaces
 
 import (
