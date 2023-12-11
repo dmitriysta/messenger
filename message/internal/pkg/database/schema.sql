@@ -1,16 +1,16 @@
 BEGIN;
 
-CREATE TABLE IF NOT EXISTS "messages" (
+CREATE TABLE IF NOT EXISTS "message" (
     id SERIAL PRIMARY KEY UNIQUE NOT NULL,
-    user_id INTEGER NOT NULL REFERENCES "users" (id) ON DELETE CASCADE,
-    channel_id INTEGER NOT NULL REFERENCES "channels" (id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES "user" (id) ON DELETE CASCADE,
+    channel_id INTEGER NOT NULL REFERENCES "channel" (id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_id ON "messages" (user_id);
-CREATE INDEX IF NOT EXISTS idx_channel_id ON "messages" (channel_id);
+CREATE INDEX IF NOT EXISTS idx_user_id ON "message" (user_id);
+CREATE INDEX IF NOT EXISTS idx_channel_id ON "message" (channel_id);
 
 COMMIT;

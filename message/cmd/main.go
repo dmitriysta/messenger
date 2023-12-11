@@ -5,6 +5,7 @@ import (
 	"github.com/dmitriysta/messenger/message/internal/pkg/tracer"
 	"github.com/dmitriysta/messenger/message/internal/repository"
 	"github.com/dmitriysta/messenger/message/internal/service"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
@@ -12,7 +13,7 @@ import (
 func main() {
 	logger := logrus.New()
 	logger.SetLevel(logrus.InfoLevel)
-	logrus.SetFormatter(&logrus.JSONFormatter{})
+	logger.SetFormatter(&logrus.JSONFormatter{})
 
 	trace, closer, err := tracer.NewJaegerTracer("message", logger)
 	if err != nil {
@@ -32,7 +33,12 @@ func main() {
 
 	router := api.SetupRouter(messageHandler)
 
-	if err := router.Run(":8080"); err != nil {
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	if err := router.Run(":" + port); err != nil {
 		logger.WithFields(logrus.Fields{
 			"module": "main",
 			"func":   "main",

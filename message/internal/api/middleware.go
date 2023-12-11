@@ -23,6 +23,9 @@ func PrometheusMiddleware() gin.HandlerFunc {
 
 		metrics.RequestCount.WithLabelValues(method, endpoint, status).Inc()
 		metrics.ResponseTime.WithLabelValues(method, endpoint).Observe(elapsed.Seconds())
-		metrics.ErrorCount.WithLabelValues(method, endpoint, status).Inc()
+
+		if c.Writer.Status() >= 400 {
+			metrics.ErrorCount.WithLabelValues(method, endpoint, status).Inc()
+		}
 	}
 }
