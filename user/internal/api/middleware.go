@@ -5,6 +5,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dmitriysta/messenger/user/internal/pkg/metrics"
@@ -30,15 +31,18 @@ func PrometheusMiddleware() gin.HandlerFunc {
 
 		metrics.RequestCount.WithLabelValues(method, endpoint, status).Inc()
 		metrics.ResponseTime.WithLabelValues(method, endpoint).Observe(elapsed.Seconds())
-		metrics.ErrorCount.WithLabelValues(method, endpoint, status).Inc()
+
+		if c.Writer.Status() >= 400 {
+			metrics.ErrorCount.WithLabelValues(method, endpoint, status).Inc()
+		}
 	}
 }
 
 func JWTMiddleware(secretKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
+		if authHeader == "" || !strings.HasPrefix(authHeader, BearerSchema) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header"})
 			return
 		}
 
