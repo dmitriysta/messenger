@@ -61,6 +61,22 @@ func (r *UserRepository) GetUserById(ctx context.Context, userId int) (*models.U
 	return &user, nil
 }
 
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	if err != nil {
+		r.logger.WithFields(logrus.Fields{
+			"module": "user",
+			"func":   "GetUserByEmail",
+			"error":  err.Error(),
+		}).Errorf("failed to get user by email: %v", err)
+
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (r *UserRepository) UpdateUser(ctx context.Context, user *models.User) error {
 	if err := user.Validate(); err != nil {
 		r.logger.WithFields(logrus.Fields{

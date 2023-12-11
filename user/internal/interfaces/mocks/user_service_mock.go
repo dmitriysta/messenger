@@ -23,6 +23,66 @@ func (_m *UserService) EXPECT() *UserService_Expecter {
 	return &UserService_Expecter{mock: &_m.Mock}
 }
 
+// AuthenticateUser provides a mock function with given fields: ctx, email, password
+func (_m *UserService) AuthenticateUser(ctx context.Context, email string, password string) (*models.User, error) {
+	ret := _m.Called(ctx, email, password)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AuthenticateUser")
+	}
+
+	var r0 *models.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*models.User, error)); ok {
+		return rf(ctx, email, password)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *models.User); ok {
+		r0 = rf(ctx, email, password)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*models.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, email, password)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UserService_AuthenticateUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AuthenticateUser'
+type UserService_AuthenticateUser_Call struct {
+	*mock.Call
+}
+
+// AuthenticateUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - email string
+//   - password string
+func (_e *UserService_Expecter) AuthenticateUser(ctx interface{}, email interface{}, password interface{}) *UserService_AuthenticateUser_Call {
+	return &UserService_AuthenticateUser_Call{Call: _e.mock.On("AuthenticateUser", ctx, email, password)}
+}
+
+func (_c *UserService_AuthenticateUser_Call) Run(run func(ctx context.Context, email string, password string)) *UserService_AuthenticateUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *UserService_AuthenticateUser_Call) Return(_a0 *models.User, _a1 error) *UserService_AuthenticateUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *UserService_AuthenticateUser_Call) RunAndReturn(run func(context.Context, string, string) (*models.User, error)) *UserService_AuthenticateUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateUser provides a mock function with given fields: ctx, name, email, password
 func (_m *UserService) CreateUser(ctx context.Context, name string, email string, password string) (*models.User, error) {
 	ret := _m.Called(ctx, name, email, password)

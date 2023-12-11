@@ -188,7 +188,6 @@ func (h *UserHandler) UpdateUserHandler(c *gin.Context) {
 			"traceId":  traceID,
 			"username": user.Name + " -> " + userRequest.Username,
 			"email":    user.Email + " -> " + userRequest.Email,
-			"password": user.Password + " -> " + userRequest.Password,
 			"error":    err.Error(),
 		}).Error(errors.ErrorUpdatingUser)
 
@@ -238,5 +237,59 @@ func (h *UserHandler) DeleteUserHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User deleted successfully",
+	})
+}
+
+func (h *UserHandler) AuthenticateUserHandler(c *gin.Context) {
+	span, ctx := opentracing.StartSpanFromContext(c.Request.Context(), "AuthenticateUserHandler")
+	defer span.Finish()
+
+	var userRequest UserRequest
+
+	if err := c.ShouldBindJSON(&userRequest); err != nil {
+		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
+		h.logger.WithFields(logrus.Fields{
+			"module":  "user",
+			"handler": "AuthenticateUserHandler",
+			"traceId": traceID,
+			"error":   err.Error(),
+		}).Error(errors.InvalidRequestBody)
+
+		c.JSON(http.StatusBadRequest, gin.H{"error": errors.InvalidRequestBody})
+		return
+	}
+
+	user, token, err := h.userService.AuthenticateUser(ctx, userRequest.Email, userRequest.Password)
+	if err != nil {
+		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
+		if err.Error() == errors.ErrorUserNotFound {
+			h.logger.WithFields(logrus.Fields{
+				"module":  "user",
+				"handler": "AuthenticateUserHandler",
+				"traceId": traceID,
+				"email":   userRequest.Email,
+				"error":   err.Error(),
+			}).Error(errors.ErrorUserNotFound)
+
+			c.JSON(http.StatusUnauthorized, gin.H{"error": errors.ErrorUserNotFound})
+			return
+		}
+
+		h.logger.WithFields(logrus.Fields{
+			"module":  "user",
+			"handler": "AuthenticateUserHandler",
+			"traceId": traceID,
+			"error":   err.Error(),
+		}).Error(errors.ErrorAuthenticatingUser)
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorAuthenticatingUser})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"id":       user.Id,
+		"username": user.Name,
+		"email":    user.Email,
+		"token":    token,
 	})
 }
