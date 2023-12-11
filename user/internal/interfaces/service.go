@@ -13,4 +13,5 @@ type UserService interface {
 	GetUserById(ctx context.Context, userId int) (*models.User, error)
 	UpdateUser(ctx context.Context, user *models.User) error
 	DeleteUser(ctx context.Context, userId int) error
+	AuthenticateUser(ctx context.Context, email, password string) (*models.User, string, error)
 }

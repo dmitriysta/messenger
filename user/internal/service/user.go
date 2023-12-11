@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/bcrypt"
+	"time"
 
 	"github.com/dmitriysta/messenger/user/internal/interfaces"
 	"github.com/dmitriysta/messenger/user/internal/models"
@@ -89,4 +92,39 @@ func (s *UserService) DeleteUser(ctx context.Context, userId int) error {
 	}
 
 	return nil
+}
+
+func (s *UserService) AuthenticateUser(ctx context.Context, email, password string) (*models.User, string, error) {
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		s.logger.WithFields(logrus.Fields{
+			"module": "user",
+			"func":   "AuthenticateUser",
+			"error":  err.Error(),
+		}).Errorf("failed to get user by email: %v", err)
+
+		return nil, "", err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		s.logger.WithFields(logrus.Fields{
+			"module": "user",
+			"func":   "AuthenticateUser",
+			"error":  err.Error(),
+		}).Errorf("failed to authenticate user: %v", err)
+
+		return nil, "", err
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"id":  user.Id,
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte("secret"))
+	if err != nil {
+		return nil, "", err
+	}
+
+	return user, tokenString, nil
 }

@@ -7,6 +7,8 @@ import (
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
 	"testing"
 	"time"
 )
@@ -102,5 +104,36 @@ func TestUserService_DeleteUser(t *testing.T) {
 	err := service.DeleteUser(ctx, 1)
 
 	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestUserService_AuthenticateUser(t *testing.T) {
+	mockRepo := new(mocks.UserRepository)
+	ctx := context.Background()
+	currentTime := time.Now().Truncate(time.Second)
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("test password"), bcrypt.DefaultCost)
+	require.NoError(t, err)
+
+	testUser := &models.User{
+		Id:        1,
+		Name:      "test username",
+		Password:  string(hashedPassword),
+		CreatedAt: currentTime,
+	}
+
+	mockRepo.On("GetUserByEmail", ctx, "test email").Return(testUser, nil)
+
+	logger, _ := test.NewNullLogger()
+	service := NewUserService(mockRepo, logger)
+
+	result, token, err := service.AuthenticateUser(ctx, "test email", "test password")
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, testUser.Name, result.Name)
+	assert.Equal(t, testUser.Id, result.Id)
+	assert.WithinDuration(t, currentTime, result.CreatedAt, time.Second)
+	assert.NotEmpty(t, token)
 	mockRepo.AssertExpectations(t)
 }
