@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/dmitriysta/messenger/message/internal/pkg/cache"
+	"github.com/go-redis/redis/v8"
 	"testing"
 	"time"
 
@@ -15,6 +19,7 @@ import (
 
 func TestMessageService_CreateMessage(t *testing.T) {
 	mockRepo := new(mocks.MessageRepository)
+	mockCache := new(mocks.RedisClient)
 	ctx := context.Background()
 	currentTime := time.Now().Truncate(time.Second)
 
@@ -26,10 +31,11 @@ func TestMessageService_CreateMessage(t *testing.T) {
 	}
 
 	mockRepo.On("CreateMessage", ctx, mock.AnythingOfType("*models.Message")).Return(nil)
+	mockCache.On("Del", ctx, fmt.Sprintf("messages:channel:%d", testMessage.ChannelID)).Return(nil)
 
 	logger, _ := test.NewNullLogger()
 
-	service := NewMessageService(mockRepo, logger)
+	service := NewMessageService(mockRepo, logger, mockCache)
 
 	result, err := service.CreateMessage(ctx, testMessage.UserID, testMessage.ChannelID, testMessage.Content)
 
@@ -39,11 +45,14 @@ func TestMessageService_CreateMessage(t *testing.T) {
 	assert.Equal(t, testMessage.ChannelID, result.ChannelID)
 	assert.Equal(t, testMessage.Content, result.Content)
 	assert.WithinDuration(t, currentTime, result.CreatedAt, time.Second)
+
 	mockRepo.AssertExpectations(t)
+	mockCache.AssertExpectations(t)
 }
 
 func TestMessageService_GetMessagesByChannelId(t *testing.T) {
 	mockRepo := new(mocks.MessageRepository)
+	mockCache := new(mocks.RedisClient)
 	ctx := context.Background()
 	currentTime := time.Now().Truncate(time.Second)
 
@@ -62,18 +71,24 @@ func TestMessageService_GetMessagesByChannelId(t *testing.T) {
 		},
 	}
 
+	key := fmt.Sprintf("messages:channel:%d", 1)
+	jsonData, _ := json.Marshal(testMessages)
+
+	mockCache.On("Get", ctx, key).Return(redis.NewStringResult(string(jsonData), nil))
+	mockCache.On("Set", ctx, key, jsonData, cache.TimeToLive).Return(redis.NewStatusResult("", nil))
 	mockRepo.On("GetMessagesByChannelId", ctx, 1).Return(testMessages, nil)
 
 	logger, _ := test.NewNullLogger()
-
-	service := NewMessageService(mockRepo, logger)
+	service := NewMessageService(mockRepo, logger, mockCache)
 
 	result, err := service.GetMessagesByChannelId(ctx, 1)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, testMessages, result)
+
 	mockRepo.AssertExpectations(t)
+	mockCache.AssertExpectations(t)
 }
 
 func TestMessageService_GetMessageById(t *testing.T) {
@@ -92,7 +107,7 @@ func TestMessageService_GetMessageById(t *testing.T) {
 
 	logger, _ := test.NewNullLogger()
 
-	service := NewMessageService(mockRepo, logger)
+	service := NewMessageService(mockRepo, logger, nil)
 
 	result, err := service.GetMessageById(ctx, 1)
 
@@ -104,40 +119,44 @@ func TestMessageService_GetMessageById(t *testing.T) {
 
 func TestMessageService_UpdateMessage(t *testing.T) {
 	mockRepo := new(mocks.MessageRepository)
+	mockCache := new(mocks.RedisClient)
 	ctx := context.Background()
-	currentTime := time.Now().Truncate(time.Second)
 
 	testMessage := &models.Message{
 		UserID:    1,
 		ChannelID: 1,
-		Content:   "test content",
-		CreatedAt: currentTime,
+		Content:   "updated content",
 	}
 
 	mockRepo.On("UpdateMessage", ctx, testMessage).Return(nil)
+	mockCache.On("Del", ctx, fmt.Sprintf("messages:channel:%d", testMessage.ChannelID)).Return(redis.NewIntResult(1, nil))
 
 	logger, _ := test.NewNullLogger()
-
-	service := NewMessageService(mockRepo, logger)
+	service := NewMessageService(mockRepo, logger, mockCache)
 
 	err := service.UpdateMessage(ctx, testMessage)
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+	mockCache.AssertExpectations(t)
 }
 
 func TestMessageService_DeleteMessage(t *testing.T) {
 	mockRepo := new(mocks.MessageRepository)
+	mockCache := new(mocks.RedisClient)
 	ctx := context.Background()
 
 	mockRepo.On("DeleteMessage", ctx, 1).Return(nil)
+	mockCache.On("Del", ctx, fmt.Sprintf("messages:channel:%d", 1)).Return(redis.NewIntResult(1, nil))
 
 	logger, _ := test.NewNullLogger()
 
-	service := NewMessageService(mockRepo, logger)
+	service := NewMessageService(mockRepo, logger, mockCache)
 
 	err := service.DeleteMessage(ctx, 1)
 
 	assert.NoError(t, err)
+
 	mockRepo.AssertExpectations(t)
+	mockCache.AssertExpectations(t)
 }
