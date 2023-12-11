@@ -22,12 +22,24 @@ func NewUserService(repo interfaces.UserRepository, logger *logrus.Logger) *User
 }
 
 func (s *UserService) CreateUser(ctx context.Context, name, email, password string) (*models.User, error) {
-	user := models.NewUser(name, email, password)
+	user, err := models.NewUser(name, email, password)
+	if err != nil {
+		s.logger.WithFields(logrus.Fields{
+			"module":  "user",
+			"func":    "CreateUser",
+			"subFunc": "NewUser",
+			"error":   err.Error(),
+		}).Errorf("failed to create user: %v", err)
+
+		return nil, err
+	}
+
 	if err := s.repo.CreateUser(ctx, user); err != nil {
 		s.logger.WithFields(logrus.Fields{
-			"module": "user",
-			"func":   "CreateUser",
-			"error":  err.Error(),
+			"module":  "user",
+			"func":    "CreateUser",
+			"subFunc": "CreateUser",
+			"error":   err.Error(),
 		}).Errorf("failed to create user: %v", err)
 
 		return nil, err
