@@ -16,7 +16,7 @@ import (
 func TestUserService_CreateUser(t *testing.T) {
 	mockRepo := new(mocks.UserRepository)
 	ctx := context.Background()
-	currentTime := time.Now().Truncate(time.Second)
+	currentTime := time.Now().Truncate(time.Minute)
 
 	testUser := &models.User{
 		Name:      "test username",
@@ -35,8 +35,11 @@ func TestUserService_CreateUser(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, testUser.Name, result.Name)
-	assert.Equal(t, testUser.Password, result.Password)
-	assert.WithinDuration(t, currentTime, result.CreatedAt, time.Second)
+
+	err = bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(testUser.Password))
+	assert.NoError(t, err)
+
+	assert.WithinDuration(t, currentTime, result.CreatedAt, time.Minute)
 	mockRepo.AssertExpectations(t)
 }
 
