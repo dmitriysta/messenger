@@ -76,12 +76,17 @@ func (h *MessageHandler) CreateMessageHandler(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err = json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":        message.Id,
 		"userId":    message.UserID,
 		"channelId": message.ChannelID,
 		"content":   message.Content,
 	})
+	if err != nil {
+		h.logger.Errorf(errors.ErrorEncodingResponse, err)
+		http.Error(w, errors.ErrorInternalServer, http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *MessageHandler) GetMessagesByChannelIdHandler(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +137,12 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(w http.ResponseWriter, r 
 
 	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(messages)
+	err = json.NewEncoder(w).Encode(messages)
+	if err != nil {
+		h.logger.Errorf(errors.ErrorEncodingResponse, err)
+		http.Error(w, errors.ErrorInternalServer, http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *MessageHandler) UpdateMessageHandler(w http.ResponseWriter, r *http.Request) {
@@ -191,12 +201,17 @@ func (h *MessageHandler) UpdateMessageHandler(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err = json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":        message.Id,
 		"userId":    message.UserID,
 		"channelId": message.ChannelID,
 		"content":   message.Content,
 	})
+	if err != nil {
+		h.logger.Errorf(errors.ErrorEncodingResponse, err)
+		http.Error(w, errors.ErrorInternalServer, http.StatusInternalServerError)
+		return
+	}
 }
 
 func (h *MessageHandler) DeleteMessageHandler(w http.ResponseWriter, r *http.Request) {
@@ -225,7 +240,12 @@ func (h *MessageHandler) DeleteMessageHandler(w http.ResponseWriter, r *http.Req
 
 	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"id": messageId,
 	})
+	if err != nil {
+		h.logger.Errorf(errors.ErrorEncodingResponse, err)
+		http.Error(w, errors.ErrorInternalServer, http.StatusInternalServerError)
+		return
+	}
 }
