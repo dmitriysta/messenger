@@ -1,15 +1,15 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 
+	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-func DatabaseConnect(logger *logrus.Logger) *gorm.DB {
+func DatabaseConnect(logger *logrus.Logger) *sql.DB {
 
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")
@@ -19,7 +19,7 @@ func DatabaseConnect(logger *logrus.Logger) *gorm.DB {
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, password, dbname, port)
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		logger.WithFields(logrus.Fields{
 			"module": "repository",
@@ -27,7 +27,18 @@ func DatabaseConnect(logger *logrus.Logger) *gorm.DB {
 			"error":  err.Error(),
 		}).Fatalf("failed to connect database: %v", err)
 
-		logger.Fatalf("failed to connect database")
+		logger.Info("failed to connect database")
+	}
+
+	err = db.Ping()
+	if err != nil {
+		logger.WithFields(logrus.Fields{
+			"module": "repository",
+			"func":   "DatabaseConnect",
+			"error":  err.Error(),
+		}).Fatalf("failed to ping database: %v", err)
+
+		logger.Fatalf("failed to ping database")
 	}
 
 	logger.Info("Database connected")

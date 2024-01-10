@@ -1,16 +1,21 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"github.com/dmitriysta/messenger/message/internal/interfaces"
 	"github.com/dmitriysta/messenger/message/internal/pkg/errors"
 
-	"github.com/gin-gonic/gin"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 	"github.com/uber/jaeger-client-go"
+)
+
+const (
+	HeaderContentType   = "Content-Type"
+	MIMEApplicationJSON = "application/json"
 )
 
 type MessageRequest struct {
@@ -33,13 +38,13 @@ func NewMessageHandler(messageService interfaces.MessageService, logger *logrus.
 	}
 }
 
-func (h *MessageHandler) CreateMessageHandler(c *gin.Context) {
-	span, ctx := opentracing.StartSpanFromContext(c.Request.Context(), "CreateMessageHandler")
+func (h *MessageHandler) CreateMessageHandler(w http.ResponseWriter, r *http.Request) {
+	span, ctx := opentracing.StartSpanFromContext(r.Context(), "CreateMessageHandler")
 	defer span.Finish()
 
 	var messageRequest MessageRequest
 
-	if err := c.ShouldBindJSON(&messageRequest); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&messageRequest); err != nil {
 		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
 		h.logger.WithFields(logrus.Fields{
 			"module":  "message",
@@ -48,7 +53,7 @@ func (h *MessageHandler) CreateMessageHandler(c *gin.Context) {
 			"error":   err.Error(),
 		}).Error(errors.InvalidRequestBody)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.InvalidRequestBody})
+		http.Error(w, errors.InvalidRequestBody, http.StatusBadRequest)
 		return
 	}
 
@@ -65,11 +70,13 @@ func (h *MessageHandler) CreateMessageHandler(c *gin.Context) {
 			"error":     err.Error(),
 		}).Error(errors.ErrorCreatingMessage)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorCreatingMessage})
+		http.Error(w, errors.ErrorCreatingMessage, http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
+	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":        message.Id,
 		"userId":    message.UserID,
 		"channelId": message.ChannelID,
@@ -77,11 +84,11 @@ func (h *MessageHandler) CreateMessageHandler(c *gin.Context) {
 	})
 }
 
-func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
-	span, ctx := opentracing.StartSpanFromContext(c.Request.Context(), "GetMessagesByChannelIdHandler")
+func (h *MessageHandler) GetMessagesByChannelIdHandler(w http.ResponseWriter, r *http.Request) {
+	span, ctx := opentracing.StartSpanFromContext(r.Context(), "GetMessagesByChannelIdHandler")
 	defer span.Finish()
 
-	channelIdStr := c.Query("channelId")
+	channelIdStr := r.URL.Query().Get("channelId")
 	if channelIdStr == "" {
 		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
 		h.logger.WithFields(logrus.Fields{
@@ -90,7 +97,7 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
 			"traceId": traceID,
 		}).Error(errors.InvalidChannelId)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.InvalidChannelId})
+		http.Error(w, errors.InvalidChannelId, http.StatusBadRequest)
 		return
 	}
 
@@ -104,7 +111,7 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
 			"error":   err.Error(),
 		}).Error(errors.ErrorChannelIdNotInt)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorChannelIdNotInt})
+		http.Error(w, errors.ErrorChannelIdNotInt, http.StatusBadRequest)
 		return
 	}
 
@@ -119,35 +126,28 @@ func (h *MessageHandler) GetMessagesByChannelIdHandler(c *gin.Context) {
 			"error":     err.Error(),
 		}).Error(errors.ErrorGettingMessages)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorGettingMessages})
+		http.Error(w, errors.ErrorGettingMessages, http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, messages)
+	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(messages)
 }
 
-func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
-	span, ctx := opentracing.StartSpanFromContext(c.Request.Context(), "UpdateMessageHandler")
+func (h *MessageHandler) UpdateMessageHandler(w http.ResponseWriter, r *http.Request) {
+	span, ctx := opentracing.StartSpanFromContext(r.Context(), "UpdateMessageHandler")
 	defer span.Finish()
 
-	messageIdStr := c.Param("id")
-	messageId, err := strconv.Atoi(messageIdStr)
-	if err != nil {
-		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
-		h.logger.WithFields(logrus.Fields{
-			"module":  "message",
-			"handler": "UpdateMessageHandler",
-			"traceId": traceID,
-			"error":   err.Error(),
-		}).Error(errors.ErrorMessageIdNotInt)
-
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorMessageIdNotInt})
+	ctxId := r.Context().Value("id")
+	messageId, ok := ctxId.(int)
+	if !ok {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
 
 	var updateReq MessageRequest
-
-	if err := c.ShouldBindJSON(&updateReq); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&updateReq); err != nil {
 		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
 		h.logger.WithFields(logrus.Fields{
 			"module":  "message",
@@ -156,7 +156,7 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 			"error":   err.Error(),
 		}).Error(errors.ErrorBindingRequestBody)
 
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorBindingRequestBody})
+		http.Error(w, errors.ErrorBindingRequestBody, http.StatusBadRequest)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 			"error":   err.Error(),
 		}).Error(errors.ErrorGettingMessages)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorGettingMessages})
+		http.Error(w, errors.ErrorGettingMessages, http.StatusInternalServerError)
 		return
 	}
 
@@ -185,11 +185,13 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 			"error":   err.Error(),
 		}).Error(errors.ErrorUpdatingMessage)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorUpdatingMessage})
+		http.Error(w, errors.ErrorUpdatingMessage, http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"id":        message.Id,
 		"userId":    message.UserID,
 		"channelId": message.ChannelID,
@@ -197,22 +199,14 @@ func (h *MessageHandler) UpdateMessageHandler(c *gin.Context) {
 	})
 }
 
-func (h *MessageHandler) DeleteMessageHandler(c *gin.Context) {
-	span, ctx := opentracing.StartSpanFromContext(c.Request.Context(), "DeleteMessageHandler")
+func (h *MessageHandler) DeleteMessageHandler(w http.ResponseWriter, r *http.Request) {
+	span, ctx := opentracing.StartSpanFromContext(r.Context(), "DeleteMessageHandler")
 	defer span.Finish()
 
-	messageIdStr := c.Param("id")
-	messageId, err := strconv.Atoi(messageIdStr)
-	if err != nil {
-		traceID := span.Context().(jaeger.SpanContext).TraceID().String()
-		h.logger.WithFields(logrus.Fields{
-			"module":  "message",
-			"handler": "DeleteMessageHandler",
-			"traceId": traceID,
-			"error":   err.Error(),
-		}).Error(errors.ErrorMessageIdNotInt)
-
-		c.JSON(http.StatusBadRequest, gin.H{"error": errors.ErrorMessageIdNotInt})
+	ctxId := r.Context().Value("id")
+	messageId, ok := ctxId.(int)
+	if !ok {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
 
@@ -225,11 +219,13 @@ func (h *MessageHandler) DeleteMessageHandler(c *gin.Context) {
 			"error":   err.Error(),
 		}).Error(errors.ErrorDeletingMessage)
 
-		c.JSON(http.StatusInternalServerError, gin.H{"error": errors.ErrorDeletingMessage})
+		http.Error(w, errors.ErrorDeletingMessage, http.StatusInternalServerError)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Message deleted successfully",
+	w.Header().Set(HeaderContentType, MIMEApplicationJSON)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id": messageId,
 	})
 }

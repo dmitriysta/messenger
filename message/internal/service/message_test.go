@@ -54,7 +54,7 @@ func TestMessageService_GetMessagesByChannelId(t *testing.T) {
 	mockRepo := new(mocks.MessageRepository)
 	mockCache := new(mocks.RedisClient)
 	ctx := context.Background()
-	currentTime := time.Now().Truncate(time.Second)
+	currentTime := time.Now().UTC().Truncate(time.Second)
 
 	testMessages := []models.Message{
 		{
@@ -74,18 +74,23 @@ func TestMessageService_GetMessagesByChannelId(t *testing.T) {
 	key := fmt.Sprintf("messages:channel:%d", 1)
 	jsonData, _ := json.Marshal(testMessages)
 
-	mockCache.On("Get", ctx, key).Return(redis.NewStringResult(string(jsonData), nil))
-	mockCache.On("Set", ctx, key, jsonData, cache.TimeToLive).Return(redis.NewStatusResult("", nil))
-	mockRepo.On("GetMessagesByChannelId", ctx, 1).Return(testMessages, nil)
-
 	logger, _ := test.NewNullLogger()
 	service := NewMessageService(mockRepo, logger, mockCache)
-
+	mockCache.On("Get", ctx, key).Return(redis.NewStringResult(string(jsonData), nil)).Once()
 	result, err := service.GetMessagesByChannelId(ctx, 1)
-
 	assert.NoError(t, err)
-	assert.NotNil(t, result)
 	assert.Equal(t, testMessages, result)
+	mockCache.AssertCalled(t, "Get", ctx, key)
+	mockRepo.AssertNotCalled(t, "GetMessagesByChannelId", ctx, 1)
+
+	mockCache.On("Get", ctx, key).Return(redis.NewStringResult("", redis.Nil)).Once()
+	mockRepo.On("GetMessagesByChannelId", ctx, 1).Return(testMessages, nil).Once()
+	mockCache.On("Set", ctx, key, jsonData, cache.TimeToLive).Return(redis.NewStatusResult("", nil)).Once()
+	result, err = service.GetMessagesByChannelId(ctx, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, testMessages, result)
+	mockRepo.AssertCalled(t, "GetMessagesByChannelId", ctx, 1)
+	mockCache.AssertCalled(t, "Set", ctx, key, jsonData, cache.TimeToLive)
 
 	mockRepo.AssertExpectations(t)
 	mockCache.AssertExpectations(t)

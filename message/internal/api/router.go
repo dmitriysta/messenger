@@ -1,21 +1,49 @@
 package api
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"context"
+	"net/http"
+	"strconv"
+	"strings"
 )
 
-func SetupRouter(messageHandler *MessageHandler) *gin.Engine {
-	router := gin.Default()
+func MessageRouteHandler(createHandler, getHandler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			createHandler(w, r)
+		case http.MethodGet:
+			getHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
 
-	router.Use(PrometheusMiddleware())
+func MessageIdRouteHandler(updateHandler, deleteHandler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/messages/")
+		if path == "" {
+			http.Error(w, "ID is required", http.StatusBadRequest)
+			return
+		}
 
-	router.POST("/messages", messageHandler.CreateMessageHandler)
-	router.GET("/messages", messageHandler.GetMessagesByChannelIdHandler)
-	router.PUT("/messages/:id", messageHandler.UpdateMessageHandler)
-	router.DELETE("/messages/:id", messageHandler.DeleteMessageHandler)
+		id, err := strconv.Atoi(path)
+		if err != nil {
+			http.Error(w, "Invalid ID", http.StatusBadRequest)
+			return
+		}
 
-	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+		ctx := context.WithValue(r.Context(), "id", id)
+		r = r.WithContext(ctx)
 
-	return router
+		switch r.Method {
+		case http.MethodPut:
+			updateHandler(w, r)
+		case http.MethodDelete:
+			deleteHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
 }
