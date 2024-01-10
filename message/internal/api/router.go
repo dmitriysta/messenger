@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+type contextKey string
+
+const contextKeyId contextKey = "id"
+
 func MessageRouteHandler(createHandler, getHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -34,7 +38,7 @@ func MessageIdRouteHandler(updateHandler, deleteHandler http.HandlerFunc) http.H
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "id", id)
+		ctx := context.WithValue(r.Context(), contextKeyId, id)
 		r = r.WithContext(ctx)
 
 		switch r.Method {
