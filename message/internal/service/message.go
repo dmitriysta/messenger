@@ -51,16 +51,7 @@ func (s *MessageService) GetMessagesByChannelId(ctx context.Context, channelId i
 	key := fmt.Sprintf(CheMessageChannelPrefix+"%d", channelId)
 
 	cachedMessages, err := s.cache.Get(ctx, key).Result()
-	if err != nil {
-		s.logger.WithFields(logrus.Fields{
-			"module":    "message",
-			"func":      "GetMessagesByChannelId",
-			"error":     err.Error(),
-			"channelId": channelId,
-		}).Errorf("failed to get messages by channel id: %v", err)
-
-		return nil, err
-	} else if err == nil {
+	if err == nil {
 		var messages []models.Message
 		if err := json.Unmarshal([]byte(cachedMessages), &messages); err != nil {
 			s.logger.WithFields(logrus.Fields{
@@ -69,8 +60,8 @@ func (s *MessageService) GetMessagesByChannelId(ctx context.Context, channelId i
 				"error":     err.Error(),
 				"channelId": channelId,
 			}).Errorf("failed to unmarshal cached messages: %v", err)
-
-			return nil, err
+		} else {
+			return messages, nil
 		}
 	}
 

@@ -12,13 +12,13 @@ const (
 )
 
 type Message struct {
-	Id        int       `json:"id" gorm:"primaryKey;autoIncrement"`
-	UserID    int       `json:"userId" gorm:"index:idx_user_id"`
-	ChannelID int       `json:"channelId" gorm:"index:idx_channel_id"`
-	Content   string    `json:"content" gorm:"type:text"`
-	CreatedAt time.Time `json:"createdAt" gorm:"autoCreateTime"`
-	UpdatedAt time.Time `json:"updatedAt" gorm:"autoUpdateTime"`
-	DeletedAt time.Time `json:"-" gorm:"autoDeleteTime"`
+	Id        int       `json:"id"`
+	UserID    int       `json:"userId"`
+	ChannelID int       `json:"channelId"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+	DeletedAt time.Time `json:"-"`
 }
 
 func (m *Message) Validate() error {

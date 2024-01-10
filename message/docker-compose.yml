@@ -35,6 +35,18 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis:/data
+    networks:
+      - app-network
+
   prometheus:
     image: prom/prometheus
     container_name: prometheus
